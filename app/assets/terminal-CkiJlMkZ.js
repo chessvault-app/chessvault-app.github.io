@@ -1,0 +1,1 @@
+import{p as e,s as t}from"./san-DpBJhXWL.js";function n(n){let r;try{r=e.fromSetup(t(n).unwrap()).unwrap()}catch{return null}return r.isEnd()?r.isCheckmate()?{mate:r.turn===`white`?-1:1}:{cp:0}:null}export{n as t};

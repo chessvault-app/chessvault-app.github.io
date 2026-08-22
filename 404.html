@@ -1,0 +1,590 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Chess Vault — your chess, in plain files</title>
+    <meta
+      name="description"
+      content="A private, self-hosted chess workbench: engine analysis, opening explorer, studies, notes, a game collection and a puzzle trainer — all stored as PGN, markdown and JSON in one folder you own."
+    />
+    <link rel="icon" href="app/favicon.svg" />
+    <meta property="og:title" content="Chess Vault" />
+    <meta property="og:description" content="Your chess, in plain files." />
+    <meta property="og:image" content="shots/board.png" />
+    <meta name="color-scheme" content="light dark" />
+    <style>
+      /* Self-contained on purpose: a landing page that needs a build step is
+         a landing page that breaks when the build changes.
+
+         THE DESIGN IS THE APP'S. The app is a shadcn/ui project and wears
+         the registry's neutral theme at rest (docs/design-principles.md,
+         "The component layer"): a white page, grey surfaces, a near-black
+         primary, hairline-ring cards, one radius every corner derives from.
+         This sheet is that theme written out by hand — the same token names
+         and the same values the registry ships, so clicking "Try the demo"
+         lands in an app that looks like the page that offered it. The page
+         follows the system's light/dark setting because the app does too:
+         the OLD page was dark and only dark, which was continuous with an
+         app whose default theme was dark, and is not any more. */
+      :root {
+        color-scheme: light;
+        /* shadcn's neutral theme, light. */
+        --background: oklch(100% 0 0);
+        --foreground: oklch(14.5% 0 0);
+        --card: oklch(100% 0 0);
+        --muted: oklch(97% 0 0);
+        --muted-foreground: oklch(55.6% 0 0);
+        --border: oklch(92.2% 0 0);
+        --primary: oklch(20.5% 0 0);
+        --primary-foreground: oklch(98.5% 0 0);
+        --ring: oklch(70.8% 0 0);
+        /* The card's hairline: ring-foreground/10, not the border colour —
+           the registry's nova card is a ring, and it is what makes a white
+           card read on a white page. */
+        --hairline: oklch(14.5% 0 0 / 10%);
+        /* One radius, and the ladder it implies: lg is the radius (buttons,
+           inputs), xl is a step up (cards), md a step down (the pills). */
+        --radius: 0.625rem;
+        --radius-md: calc(var(--radius) - 2px);
+        --radius-lg: var(--radius);
+        --radius-xl: calc(var(--radius) + 4px);
+
+        /* One spacing scale. Every margin, padding and gap below is a step
+           on it. */
+        --s1: 0.25rem;
+        --s2: 0.5rem;
+        --s3: 0.75rem;
+        --s4: 1rem;
+        --s5: 1.5rem;
+        --s6: 2rem;
+        --s7: 3rem;
+        --s8: 4rem;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          color-scheme: dark;
+          /* shadcn's neutral theme, dark: 14.5 / 20.5 / 26.9 %, as the app. */
+          --background: oklch(14.5% 0 0);
+          --foreground: oklch(98.5% 0 0);
+          --card: oklch(20.5% 0 0);
+          --muted: oklch(26.9% 0 0);
+          --muted-foreground: oklch(70.8% 0 0);
+          --border: oklch(100% 0 0 / 10%);
+          --primary: oklch(92.2% 0 0);
+          --primary-foreground: oklch(20.5% 0 0);
+          --ring: oklch(55.6% 0 0);
+          --hairline: oklch(98.5% 0 0 / 10%);
+        }
+      }
+      * { box-sizing: border-box; }
+      html { -webkit-text-size-adjust: 100%; }
+      body {
+        margin: 0;
+        background: var(--background);
+        color: var(--foreground);
+        font: 15px/1.6 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+          "Helvetica Neue", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      a { color: inherit; }
+      /* One focus ring, the registry's: ring-3 in ring/50, and no outline
+         of its own. */
+      :focus-visible { outline: none; box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 50%, transparent); }
+      .btn:focus-visible { border-color: var(--ring); }
+
+      /* ONE width for the whole page, feature rows included, so every
+         section starts and ends on the same two vertical lines. */
+      .wrap { max-width: 62rem; margin: 0 auto; padding-inline: var(--s4); }
+
+      header { padding-block: var(--s3); border-bottom: 1px solid var(--border); }
+      .bar { display: flex; align-items: center; gap: var(--s3); }
+      .mark { display: flex; align-items: center; gap: var(--s2); font-weight: 600; letter-spacing: -0.01em; text-decoration: none; }
+      /* The app's mark: white on a black tile, in both themes — it takes
+         no side, like the favicon. */
+      .mark svg { width: 1.75rem; height: 1.75rem; border-radius: 0.45rem; background: oklch(14.5% 0 0); color: oklch(100% 0 0); padding: 0.2rem; }
+      @media (prefers-color-scheme: dark) {
+        .mark svg { box-shadow: 0 0 0 1px var(--hairline); }
+      }
+      .bar .spacer { margin-left: auto; }
+      /* The language switch is the registry's Tabs: a muted track, and the
+         chosen tab a raised pill on the card colour. */
+      .lang {
+        display: inline-flex; gap: var(--s1); padding: 3px;
+        background: var(--muted); border-radius: var(--radius-lg);
+      }
+      .lang button {
+        font: inherit; font-size: 0.8rem; line-height: 1; padding: 0.375rem 0.625rem; border: 1px solid transparent;
+        border-radius: var(--radius-md); background: transparent; color: var(--muted-foreground); cursor: pointer;
+      }
+      .lang button[aria-pressed='true'] { background: var(--card); color: var(--foreground); font-weight: 500; border-color: var(--hairline); box-shadow: 0 1px 2px oklch(0% 0 0 / 0.05); }
+      @media (prefers-color-scheme: dark) {
+        .lang button[aria-pressed='true'] { background: color-mix(in oklch, var(--foreground) 10%, transparent); border-color: var(--border); }
+      }
+
+      /* Buttons are shadcn's: `.btn` is the outline variant (border, page
+         colour, muted on hover) and `.btn.primary` the default one (a
+         near-black fill, a near-white face). Their height is the
+         registry's lg; the hero's pair get a size up, which the registry
+         has no name for because no app button needs it. */
+      .btn {
+        display: inline-flex; align-items: center; justify-content: center; gap: 0.375rem;
+        height: 2.25rem; padding-inline: 0.875rem; border-radius: var(--radius-lg); text-decoration: none;
+        font-size: 0.875rem; font-weight: 500; line-height: 1; white-space: nowrap;
+        border: 1px solid var(--border); background: var(--background); color: var(--foreground);
+        transition: background 0.15s, border-color 0.15s, color 0.15s;
+      }
+      .btn:hover { background: var(--muted); }
+      .btn:active { transform: translateY(1px); }
+      .btn.primary { background: var(--primary); color: var(--primary-foreground); border-color: transparent; }
+      .btn.primary:hover { background: color-mix(in oklch, var(--primary) 80%, transparent); }
+      @media (prefers-color-scheme: dark) {
+        .btn:not(.primary) { background: color-mix(in oklch, var(--foreground) 7%, transparent); }
+        .btn:not(.primary):hover { background: color-mix(in oklch, var(--foreground) 12%, transparent); }
+      }
+
+      .hero { padding-block: var(--s8) var(--s7); text-align: center; }
+      h1 { font-size: clamp(2rem, 6vw, 3.25rem); line-height: 1.1; margin: 0 0 var(--s4); letter-spacing: -0.03em; font-weight: 600; }
+      .tagline { font-size: clamp(1.05rem, 2.4vw, 1.25rem); color: var(--muted-foreground); margin: 0 auto var(--s6); max-width: 36rem; }
+      .cta { display: flex; flex-wrap: wrap; gap: var(--s3); justify-content: center; }
+      .cta .btn { height: 2.5rem; padding-inline: var(--s5); font-size: 0.9375rem; }
+      .note { color: var(--muted-foreground); font-size: 0.82rem; margin-top: var(--s4); }
+
+      /* Screenshots are shown in both themes: a `<picture>` picks the dark
+         capture under the same media query that picks the dark tokens, so
+         the app in the picture is the app the page is drawn in. */
+      .shot { margin: var(--s7) 0 0; }
+      .shot img {
+        width: 100%; height: auto; display: block; border-radius: var(--radius-xl);
+        box-shadow: 0 0 0 1px var(--hairline), 0 1.5rem 3rem oklch(0% 0 0 / 0.18);
+      }
+
+      section { padding-block: var(--s8); }
+      section + section { border-top: 1px solid var(--border); }
+      h2 { font-size: clamp(1.35rem, 3vw, 1.75rem); letter-spacing: -0.02em; margin: 0 0 var(--s5); font-weight: 600; }
+      .grid { display: grid; gap: var(--s4); grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); }
+      /* The registry's card: the card fill, a hairline ring, rounded-xl,
+         no shadow. */
+      .card { background: var(--card); box-shadow: 0 0 0 1px var(--hairline); border-radius: var(--radius-xl); padding: var(--s5); }
+      .card h3 { margin: 0 0 var(--s2); font-size: 0.9375rem; font-weight: 600; }
+      .card p { margin: 0; color: var(--muted-foreground); font-size: 0.875rem; }
+
+      /* The feature rows: one figure, one headline, one paragraph, the
+         sides swapping every row so the page does not march down one edge.
+
+         Stacked below 48rem with the FIGURE FIRST — the markup is written
+         figure-first for exactly that, and the flipped rows reorder in the
+         desktop media query rather than in the document, so the phone
+         always gets picture-then-words whichever way the row reads wide.
+
+         NOTHING IS CROPPED AND NOTHING IS CAPPED. These are screenshots of
+         a working interface: `cover` would fill a frame by cutting the
+         interface away, and a max-height does not cut but shrinks — which
+         on a tall panel is the same loss by a slower route. So the image
+         keeps its own aspect at its own height, and the only limit is
+         width. The card is what makes that safe: the space an image does
+         not fill belongs to a surface with a ring and a radius, so it
+         reads as a frame rather than as a hole in the page.
+
+         `width: auto` and not `100%`: these are raster screenshots, and
+         stretching one past its own pixels only blurs it. */
+      .row { display: grid; gap: var(--s6); grid-template-columns: 1fr; align-items: center; }
+      .row h2 { margin: 0 0 var(--s3); }
+      .row p { color: var(--muted-foreground); margin: 0; }
+      .row figure {
+        margin: 0; justify-self: center;
+        display: flex; align-items: center; justify-content: center;
+        width: 100%; max-width: 37.5rem; padding: var(--s3);
+        background: var(--muted); box-shadow: 0 0 0 1px var(--hairline);
+        border-radius: var(--radius-xl);
+      }
+      .row figure img {
+        display: block; width: auto; height: auto;
+        max-width: 100%; object-fit: contain;
+        border-radius: var(--radius-lg);
+        box-shadow: 0 0 0 1px var(--hairline);
+      }
+      @media (min-width: 48rem) {
+        .row { grid-template-columns: 1fr 1fr; gap: var(--s7); align-items: center; }
+        .row.flip figure { order: 2; }
+      }
+
+      .downloads { display: grid; gap: var(--s4); grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)); }
+      /* Column + auto margin on the last child: the three cards carry
+         different amounts of prose, and without this their calls to action
+         sat at three different heights. */
+      .dl {
+        display: flex; flex-direction: column;
+        background: var(--card); box-shadow: 0 0 0 1px var(--hairline);
+        border-radius: var(--radius-xl); padding: var(--s5);
+      }
+      .dl h3 { margin: 0 0 var(--s2); font-size: 0.9375rem; font-weight: 600; }
+      .dl p { margin: 0 0 var(--s4); color: var(--muted-foreground); font-size: 0.875rem; }
+      .dl > :last-child { margin-top: auto; }
+      .dl > .btn { justify-content: center; }
+      /* One row, never wrapped. The three share the width equally and
+         shrink together, so the card cannot be narrow enough to break the
+         line. */
+      .os-row { display: flex; flex-wrap: nowrap; gap: var(--s2); }
+      .btn.os {
+        /* Basis auto, not 0: forcing three equal widths gave "Windows" the
+           same share as "Linux", so the longest label overflowed while the
+           shortest had slack. */
+        flex: 1 1 auto; min-width: 0; justify-content: center;
+        gap: 0.35rem; padding-inline: var(--s2);
+        /* Shrinks with the viewport so the row never has to wrap. */
+        font-size: clamp(0.72rem, 0.636rem + 0.41vw, 0.875rem);
+        white-space: nowrap;
+      }
+      .btn.os svg { width: 1em; height: 1em; flex: none; }
+      code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.85em;
+        background: var(--muted); border-radius: var(--radius-md); padding: 0.1rem 0.35rem;
+      }
+      pre {
+        background: var(--muted); border-radius: var(--radius-lg);
+        padding: var(--s3) var(--s4); overflow-x: auto; font-size: 0.8rem; line-height: 1.55; margin: 0;
+      }
+      pre code { background: none; padding: 0; font-size: inherit; }
+
+      footer { border-top: 1px solid var(--border); padding-block: var(--s6) var(--s7); color: var(--muted-foreground); font-size: 0.85rem; }
+      footer p { margin: 0 0 var(--s2); }
+      footer a { text-decoration: none; }
+      footer a:hover { text-decoration: underline; color: var(--foreground); }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="wrap bar">
+        <span class="mark">
+          <!-- The app's mark: the hex from favicon.svg, white on its black tile. -->
+          <svg viewBox="20 20 80 80" fill="currentColor" aria-hidden="true">
+            <path d="M60 24 L91 42 V78 L60 96 L29 78 V42 Z" fill="none" stroke="currentColor" stroke-width="7" stroke-linejoin="round" />
+            <path d="M60 60 L60 24 L91 42 Z" />
+          </svg>
+          Chess Vault
+        </span>
+        <span class="spacer"></span>
+        <div class="lang" role="group" aria-label="Language">
+          <button type="button" data-lang="en" aria-pressed="true">English</button>
+          <button type="button" data-lang="ko" aria-pressed="false">한국어</button>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <div class="wrap hero">
+        <h1 data-ko="당신의 체스를, 평범한 파일로.">Your chess, in plain files.</h1>
+        <p
+          class="tagline"
+          data-ko="직접 호스팅하는 개인 체스 작업대입니다. 분석, 오프닝 탐색기, 스터디, 노트, 기보 모음, 퍼즐 훈련 — 모두 당신이 소유한 폴더 하나에."
+        >
+          A private, self-hosted chess workbench: analysis, an opening explorer, studies, notes, a
+          game collection and puzzle training — all in one folder you own.
+        </p>
+        <div class="cta">
+          <a class="btn primary" href="app/" data-ko="데모 열기">Try the demo</a>
+          <a class="btn" href="#download" data-ko="내려받기">Download</a>
+        </div>
+        <p
+          class="note"
+          data-ko="데모는 설치도 계정도 필요 없고, 브라우저에서 그대로 돌아갑니다."
+        >
+          The demo needs no install and no account — it runs entirely in your browser.
+        </p>
+        <div class="shot">
+          <picture>
+            <source media="(prefers-color-scheme: dark)" srcset="shots/board-dark.png" />
+            <img src="shots/board.png" alt="The analysis board with the engine and opening explorer" />
+          </picture>
+        </div>
+      </div>
+
+      <section class="wrap">
+        <h2 data-ko="무엇을 할 수 있나요">What it does</h2>
+        <div class="grid">
+          <div class="card">
+            <h3 data-ko="분석 보드">Analysis board</h3>
+            <p data-ko="Stockfish 18이 브라우저에서 돌아갑니다. 변화수, 주석, 화살표를 갖춘 완전한 수 트리와, 정확도를 매기는 게임 리뷰까지.">
+              Stockfish 18 runs in the browser. Full move trees with variations, comments and
+              arrows, plus a game review that scores accuracy.
+            </p>
+          </div>
+          <div class="card">
+            <h3 data-ko="스터디와 노트">Studies and notes</h3>
+            <p data-ko="챕터로 나뉜 PGN 스터디와, 대화형 보드를 끼워 넣는 마크다운 노트. 파일은 Obsidian에서도 그대로 읽힙니다.">
+              PGN chapter studies, and markdown notes with interactive boards embedded in the text.
+              The files stay readable in Obsidian.
+            </p>
+          </div>
+          <div class="card">
+            <h3 data-ko="퍼즐 훈련">Puzzle training</h3>
+            <p data-ko="Lichess 퍼즐을 난이도 구간과 진행 대시보드로 훈련합니다. 스캔한 전술책을 읽어 들이는 기능도 있습니다.">
+              Train on the Lichess puzzle set with difficulty bands and a progress dashboard — and
+              import scanned tactics books.
+            </p>
+          </div>
+          <div class="card">
+            <h3 data-ko="오프닝">Openings</h3>
+            <p data-ko="직접 만든 참고 데이터베이스로 탐색하고, 레퍼토리 트레이너로 실제 통계를 상대해 연습합니다.">
+              Explore with reference databases built from your own PGNs, and rehearse lines against
+              real statistics in the repertoire trainer.
+            </p>
+          </div>
+          <div class="card">
+            <h3 data-ko="당신의 기보">Your games</h3>
+            <p data-ko="chess.com과 Lichess 기보를 월별로 넘겨 보고, 주석을 달아 모음으로 간직합니다.">
+              Browse your chess.com and Lichess archives month by month, and keep an annotated
+              collection of the ones worth keeping.
+            </p>
+          </div>
+          <div class="card">
+            <h3 data-ko="완전히 오프라인">Completely offline</h3>
+            <p data-ko="기본은 이 기기입니다. 앱도 보관함도 당신의 컴퓨터에 있고, 엔진·글꼴·아이콘이 전부 함께 들어 있어 런타임에 부르는 CDN이 없습니다. 인터넷을 끊어도 달라지는 것이 없습니다.">
+              By default it runs on this machine — the app and the vault both. The engine, fonts and
+              icons all ship with it and there are no runtime CDN calls, so pulling the network
+              cable changes nothing.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- The feature rows. Figure first in every one; the flipped rows put
+           it on the right at 48rem and up, so a phone reads picture, then
+           words, all the way down. -->
+      <section class="wrap">
+        <div class="row">
+          <figure>
+            <picture>
+              <source media="(prefers-color-scheme: dark)" srcset="shots/opening-map-dark.png" />
+              <img
+                src="shots/opening-map.png"
+                alt="The opening map: a white repertoire as a constellation of moves, each dot named by the opening catalogue and sized by how often the field plays it"
+              />
+            </picture>
+          </figure>
+          <div>
+            <h2 data-ko="오프닝 맵">The opening map</h2>
+            <p data-ko="레퍼토리를 목록이 아니라 형태로 봅니다. 직접 고른 수를 색마다 하나의 맵에 배치하면, 각 점은 실제 채택 빈도만큼 커지고 아직 답이 없는 곳에는 배지가 붙습니다. 스터디를 연결하면 그 아래는 전부 스터디에서 유도되므로, 맵이 준비되었다고 말하는 것은 실제로 준비된 것입니다.">
+              Your repertoire as a shape rather than a list: the moves you chose, one map per
+              colour, each dot sized by how often the field plays it and badged where you have no
+              answer yet. Link a study and everything below is derived from it, so what the map
+              claims you have prepared is what you have.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="wrap">
+        <div class="row flip">
+          <figure>
+            <picture>
+              <source media="(prefers-color-scheme: dark)" srcset="shots/opening-map-node-dark.png" />
+              <img
+                src="shots/opening-map-node.png"
+                alt="One move's panel: the position, its catalogue name, how deep the linked studies prepare it, and the studies and notes tagged onto it"
+              />
+            </picture>
+          </figure>
+          <div>
+            <h2 data-ko="수 하나하나가 무엇에 덮이는지 압니다">Every move knows what covers it</h2>
+            <p data-ko="점 하나를 고르면 오프닝 카탈로그가 이름을 붙이고, 연결된 스터디가 실제로 얼마나 깊이 —몇 개의 라인으로— 준비하는지를 패널이 세어 줍니다. 노트는 읽는 사람을 위한 참고일 뿐, 무엇이 준비되었는지 말할 수 있는 것은 스터디뿐입니다.">
+              Select a dot and the opening catalogue names it, while the panel counts how deep your
+              linked studies actually prepare it and how many lines they end in. Notes come along
+              for the reader; only the studies are allowed to say what is prepared.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="wrap">
+        <div class="row">
+          <figure>
+            <picture>
+              <source media="(prefers-color-scheme: dark)" srcset="shots/note-phone-dark.png" />
+              <img
+                src="shots/note-phone.png"
+                alt="A note: markdown headings, a live board embedded in the text, and wiki-links to other documents"
+              />
+            </picture>
+          </figure>
+          <div>
+            <h2 data-ko="파일이 곧 형식입니다">The files are the format</h2>
+            <p data-ko="스터디는 PGN이고, 노트는 마크다운이며, 진행 상황은 JSON입니다. 데이터베이스가 진실의 원천이 되는 일도, 독자 규격도 없습니다. 백업은 폴더 하나를 복사하는 일이고, 이 앱이 사라져도 당신의 체스는 다른 도구로 열립니다.">
+              Studies are PGN, notes are markdown, progress is JSON. No database as the source of
+              truth, no proprietary formats. Backing up is copying a folder — and if this app ever
+              goes away, your chess opens in something else.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="wrap">
+        <div class="row flip">
+          <figure>
+            <picture>
+              <source media="(prefers-color-scheme: dark)" srcset="shots/games-phone-dark.png" />
+              <img
+                src="shots/games-phone.png"
+                alt="The same game collection at phone width, with the bottom bar the app uses there"
+              />
+            </picture>
+          </figure>
+          <div>
+            <h2 data-ko="원한다면, 어디서나">Or reach it from anywhere</h2>
+            <p data-ko="보관함을 이 기기에 두는 것이 기본이지만, 작은 리눅스 서버 하나가 보관함을 소유하고 나머지는 전부 클라이언트가 될 수도 있습니다 — 휴대폰에서는 홈 화면에 추가해 PWA로, 데스크톱에서는 같은 앱을 그 서버에 연결해서. 어느 기기에서 열어도 같은 기보, 같은 진행 상황입니다.">
+              Keeping the vault on this machine is the default, but one small Linux box can own it
+              instead and everything else becomes a client — a phone's home screen as a PWA, or the
+              same desktop app pointed at it. Same games, same progress, whichever device you
+              opened.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="wrap" id="download">
+        <h2 data-ko="내려받기">Download</h2>
+        <div class="downloads">
+          <div class="dl">
+            <h3 data-ko="데스크톱 앱">Desktop app</h3>
+            <p data-ko="Windows, macOS, Linux 설치 프로그램. 기본은 이 기기의 폴더를 보관함으로 쓰는 로컬 모드이고, 원한다면 서버에 연결하는 클라이언트로도 씁니다. 실행할 때 스스로 갱신됩니다.">
+              Installers for Windows, macOS and Linux. By default it keeps the vault in a folder on
+              that machine; point it at a server instead if you have one. It updates itself on
+              launch.
+            </p>
+            <!-- All three are listed, always. The one matching the visitor's
+                 OS is promoted to the primary button and moved first by the
+                 script below; a wrong guess costs nothing because the other
+                 two are right there, which a single detected download would
+                 not have been. -->
+            <div class="os-row">
+              <a class="btn os" href="https://github.com/chessvault-app/chessvault/releases/latest" data-os="win">
+                <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M0 2.25 6.5 1.36v6.14H0zM7.3 1.25 16 0v7.5H7.3zM0 8.5h6.5v6.14L0 13.75zm7.3 0H16V16l-8.7-1.25z"/></svg>
+                <span>Windows</span>
+              </a>
+              <a class="btn os" href="https://github.com/chessvault-app/chessvault/releases/latest" data-os="mac">
+                <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M11.18 8.5c-.02-1.7 1.39-2.52 1.45-2.56-.79-1.16-2.02-1.32-2.46-1.34-1.05-.11-2.05.62-2.58.62-.53 0-1.35-.6-2.22-.59-1.14.02-2.19.66-2.78 1.68-1.19 2.06-.3 5.11.85 6.78.57.82 1.24 1.73 2.12 1.7.85-.03 1.18-.55 2.21-.55 1.03 0 1.32.55 2.22.53.92-.01 1.5-.83 2.06-1.65.65-.95.92-1.87.93-1.92-.02-.01-1.78-.68-1.8-2.7zM9.5 3.4c.47-.57.78-1.36.7-2.15-.67.03-1.49.45-1.97 1.01-.43.5-.81 1.31-.71 2.08.75.06 1.51-.38 1.98-.94z"/></svg>
+                <span>macOS</span>
+              </a>
+              <a class="btn os" href="https://github.com/chessvault-app/chessvault/releases/latest" data-os="linux">
+                <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0C6.3 0 5.4 1.4 5.4 3.1c0 .8.1 1.5.1 2.1 0 .7-.6 1.4-1.2 2.4C3.5 8.9 2.6 10.4 2.6 12c0 .5.1.9.3 1.2-.3.4-.5.8-.4 1.2.1.5.6.8 1.3.9.6.1 1.4.1 2.1.3.6.2 1.1.5 1.8.5s1.4-.3 2.1-.5c.7-.2 1.5-.2 2.1-.3.7-.1 1.2-.4 1.3-.9.1-.4-.1-.8-.4-1.2.2-.3.3-.7.3-1.2 0-1.6-.9-3.1-1.7-4.4-.6-1-1.2-1.7-1.2-2.4 0-.6.1-1.3.1-2.1C10.6 1.4 9.7 0 8 0zm-1.1 3.2c.3 0 .5.3.5.7s-.2.7-.5.7-.5-.3-.5-.7.2-.7.5-.7zm2.2 0c.3 0 .5.3.5.7s-.2.7-.5.7-.5-.3-.5-.7.2-.7.5-.7zM8 5.4c.6 0 1.5.4 1.5.8 0 .2-.2.3-.5.5-.3.2-.7.4-1 .4s-.7-.2-1-.4c-.3-.2-.5-.3-.5-.5 0-.4.9-.8 1.5-.8z"/></svg>
+                <span>Linux</span>
+              </a>
+            </div>
+          </div>
+          <div class="dl">
+            <h3 data-ko="직접 호스팅">Host it yourself</h3>
+            <p data-ko="Node가 있는 아무 기기에서나 돌릴 수 있습니다. 포트 하나가 앱과 API를 함께 제공합니다.">
+              Run it anywhere Node runs. One port serves both the app and its API.
+            </p>
+            <pre><code>git clone https://github.com/chessvault-app/chessvault.git
+cd chessvault
+npm install
+npm run build
+CHESS_VAULT_DIR=/srv/chess-vault npm start</code></pre>
+          </div>
+          <div class="dl">
+            <h3 data-ko="휴대폰">Phone</h3>
+            <p data-ko="설치할 것이 없습니다. 서버 주소를 열고 홈 화면에 추가하면 오프라인 셸을 갖춘 온전한 앱이 됩니다.">
+              Nothing to install: open your server's address and add it to the home screen for a
+              full app with an offline shell.
+            </p>
+            <a class="btn" href="app/" data-ko="먼저 데모를 써 보세요">Try the demo first</a>
+          </div>
+        </div>
+        <p class="note" data-ko="macOS 빌드는 서명되어 있지 않아, 처음 한 번은 오른쪽 클릭 후 열기가 필요합니다.">
+          The macOS build is unsigned, so the first launch needs right-click then Open.
+        </p>
+      </section>
+    </main>
+
+    <footer>
+      <div class="wrap">
+        <p data-ko="Chess Vault는 GPL-3.0 자유 소프트웨어입니다. 퍼즐은 Lichess 퍼즐 데이터베이스(CC0)에서 왔습니다.">
+          Chess Vault is free software under GPL-3.0. Puzzles come from the Lichess puzzle database
+          (CC0).
+        </p>
+        <!-- This page conveys other people's work too (the pieces are cburnett,
+             GPLv2+), so the texts have to be reachable from here and not
+             only from inside the demo. -->
+        <p
+          data-ko='<a href="https://github.com/chessvault-app/chessvault">소스 코드</a> · <a href="app/licenses/index.html">라이선스</a>'
+        >
+          <a href="https://github.com/chessvault-app/chessvault">Source code</a> ·
+          <a href="app/licenses/index.html">Licences</a>
+        </p>
+      </div>
+    </footer>
+
+    <script>
+      // Promote the visitor's platform in the download row.
+      //
+      // Progressive enhancement, deliberately: all three buttons are in the
+      // markup and all three work. Detection only reorders them and marks
+      // one primary, so a wrong guess — or no script at all — still leaves
+      // a page where every platform is one click away. A page that showed
+      // ONLY the detected download would be broken for anyone downloading
+      // on one machine to install on another, which is most Linux users.
+      (function () {
+        var row = document.querySelector('.os-row');
+        if (!row) return;
+        var ua = navigator.userAgent;
+        // userAgentData first: Chrome freezes the platform token in the UA
+        // string, and this is the value it actually keeps current.
+        var platform = (navigator.userAgentData && navigator.userAgentData.platform) || '';
+        var probe = (platform + ' ' + ua).toLowerCase();
+        var os = null;
+        // iOS and Android get nothing promoted — there is no installer for
+        // them, and the Phone card beside this one is their answer.
+        if (/iphone|ipad|ipod|android/.test(probe)) os = null;
+        else if (/mac/.test(probe)) os = 'mac';
+        else if (/win/.test(probe)) os = 'win';
+        else if (/linux|x11|cros/.test(probe)) os = 'linux';
+        if (!os) return;
+        var mine = row.querySelector('[data-os="' + os + '"]');
+        if (!mine) return;
+        mine.classList.add('primary');
+        row.insertBefore(mine, row.firstChild);
+      })();
+
+      // Language switch. Every translatable node carries its Korean in
+      // data-ko; the English stays in the markup so the page is readable
+      // and indexable with the script disabled.
+      (function () {
+        var nodes = document.querySelectorAll('[data-ko]');
+        var english = [];
+        nodes.forEach(function (node) {
+          english.push(node.innerHTML);
+        });
+        function apply(lang) {
+          nodes.forEach(function (node, i) {
+            node.innerHTML = lang === 'ko' ? node.getAttribute('data-ko') : english[i];
+          });
+          document.documentElement.lang = lang;
+          document.querySelectorAll('.lang button').forEach(function (button) {
+            button.setAttribute('aria-pressed', String(button.dataset.lang === lang));
+          });
+          try {
+            localStorage.setItem('chess-vault:lang', lang);
+          } catch (e) {
+            /* private mode: the choice just does not persist */
+          }
+        }
+        var saved = null;
+        try {
+          saved = localStorage.getItem('chess-vault:lang');
+        } catch (e) {
+          /* ignore */
+        }
+        // The same key the app uses, so choosing Korean here and opening the
+        // demo does not ask again.
+        apply(saved === 'ko' || (!saved && (navigator.language || '').toLowerCase().indexOf('ko') === 0) ? 'ko' : 'en');
+        document.querySelectorAll('.lang button').forEach(function (button) {
+          button.addEventListener('click', function () {
+            apply(button.dataset.lang);
+          });
+        });
+      })();
+    </script>
+  </body>
+</html>

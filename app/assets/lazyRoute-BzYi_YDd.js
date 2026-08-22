@@ -1,0 +1,1 @@
+import{r as e}from"./rolldown-runtime-hePW80VL.js";import{l as t}from"./i18n-B-juPiHC.js";var n=e(t(),1),r=`chess-vault:chunk-reload`,i=1e4;function a(e){return(0,n.lazy)(()=>e().catch(e=>{let t=Number(sessionStorage.getItem(r)??0);if(Date.now()-t>i)return sessionStorage.setItem(r,String(Date.now())),location.reload(),new Promise(()=>{});throw e}))}export{a as t};

@@ -1,0 +1,1 @@
+var e=e=>e.split(` `).slice(0,4).join(` `);export{e as t};

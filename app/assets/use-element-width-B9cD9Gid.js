@@ -1,0 +1,1 @@
+import{r as e}from"./rolldown-runtime-hePW80VL.js";import{l as t}from"./i18n-Balfmrsj.js";var n=e(t(),1);function r(){let[e,t]=(0,n.useState)(0),r=(0,n.useRef)(null);return[(0,n.useCallback)(e=>{if(r.current?.disconnect(),r.current=null,!e)return;let n=new ResizeObserver(()=>t(e.clientWidth));n.observe(e),t(e.clientWidth),r.current=n},[]),e]}export{r as t};

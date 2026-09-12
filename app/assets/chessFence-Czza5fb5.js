@@ -1,0 +1,3 @@
+import{i as e}from"./fen-CgK7-o1P.js";import{r as t}from"./san-DlywKhfg.js";import{h as n,m as r}from"./pgn-4lrkhHrT.js";function i(i){let s=i.trim();if(!s)return`*`;if(s.split(`
+`).length===1&&a(s))return e(s).isOk?`[FEN "${s}"]\n[SetUp "1"]\n\n*`:null;let c=r(s)[0];if(!c)return null;let l=n(c.headers);if(l.isErr)return null;let u=c.moves.children[0];return u&&!t(l.unwrap(),u.data.san)||!u&&o(s)?null:s}function a(e){let t=e.split(/\s+/);return t.length>=4&&(t[0].match(/\//g)??[]).length===7}function o(e){return e.split(`
+`).filter(e=>!/^\s*\[/.test(e)).join(` `).replace(/\{[^}]*\}/g,``).replace(/;[^\n]*/g,``).replace(/(^|\s)(\*|1-0|0-1|1\/2-1\/2)(?=\s|$)/g,` `).trim()}export{i as t};

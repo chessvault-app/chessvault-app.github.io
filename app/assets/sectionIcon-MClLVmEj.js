@@ -1,0 +1,1 @@
+import{t as e}from"./book-bookmark-DBhhVNss.js";import{t}from"./book-open-tmCxTAx7.js";import{n}from"./skeleton-Co2GFpu8.js";import{t as r}from"./library-ClhZKdtj.js";import{t as i}from"./notebook-pen-CyCk2Ios.js";var a={games:n,studies:r,notes:i,books:t,puzzlebooks:e};export{a as t};

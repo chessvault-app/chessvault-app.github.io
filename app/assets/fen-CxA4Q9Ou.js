@@ -1,0 +1,1 @@
+var e=e=>e.split(` `).slice(0,4).join(` `);function t(e,t){let n=e.split(` `)[0].split(`/`)[8-Number(t[1])];if(!n)return null;let r=t.charCodeAt(0)-97,i=0;for(let e of n){let t=Number(e);if(Number.isInteger(t)){if(i+=t,i>r)return null}else{if(i===r)return e;i+=1}}return null}export{t as n,e as t};

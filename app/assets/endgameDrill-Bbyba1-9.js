@@ -1,0 +1,1 @@
+import{a as e}from"./scanMatch-DYQ6D5d_.js";function t(t){let{loW:n,loB:r}=e(t);return n+r<=7}export{t};

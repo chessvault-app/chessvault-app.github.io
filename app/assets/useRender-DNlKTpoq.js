@@ -1,0 +1,1 @@
+import{gr as e}from"./FormContext-C7iInS2i.js";function t(t){return e(t.defaultTagName??`div`,t,t)}export{t};

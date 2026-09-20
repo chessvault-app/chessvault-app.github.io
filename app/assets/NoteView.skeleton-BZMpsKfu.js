@@ -1,0 +1,1 @@
+import{t as e}from"./NoteView.skeleton-B-SK8cdU.js";export{e as default};

@@ -1,0 +1,1 @@
+import{a as e,i as t,n,o as r,r as i,t as a}from"./LicensesPage.skeleton-BOrzLrv8.js";export{a as GROUPS_KEY,n as HOLDER_KEY,i as LicencesHead,t as default,e as groupsOf,r as readGroups};

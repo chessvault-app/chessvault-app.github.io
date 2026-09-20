@@ -1,0 +1,1 @@
+import{a as e,c as t,i as n,l as r,n as i,o as a,r as o,s,t as c,u as l}from"./SettingsPage.skeleton-BJbUxoAD.js";export{c as APPEARANCE_LABELS,i as DEMO_VAULT_NOTE,o as PROFILE_NOTE,n as SettingsCard,a as SettingsPlaceholder,s as VAULT_COPY_NOTE,t as VAULT_NAME_NOTE,r as VAULT_ROWS_KEY,e as default,l as readVaultPaths};

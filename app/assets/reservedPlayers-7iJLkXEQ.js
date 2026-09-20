@@ -1,0 +1,1 @@
+var e=e=>e===`game`?`games/docs`:`studies`,t=(t,n)=>`vault:doc-players:${e(t)}:${n}`,n=(e,n)=>{try{let r=localStorage.getItem(t(e,n));return r===null?null:r===`1`}catch{return null}},r=(e,n,r)=>{try{localStorage.setItem(t(e,n),r?`1`:`0`)}catch{}};export{r as n,n as t};

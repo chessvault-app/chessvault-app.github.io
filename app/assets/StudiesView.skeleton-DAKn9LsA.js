@@ -1,0 +1,1 @@
+import{n as e,t}from"./StudiesView.skeleton-DdLzmszI.js";export{t as StudiesCards,e as default};

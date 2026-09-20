@@ -1,0 +1,1 @@
+import{n as e,t}from"./NotesView.skeleton-CCg6NhwC.js";export{t as NotesCards,e as default};
